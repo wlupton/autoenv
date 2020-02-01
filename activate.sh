@@ -166,8 +166,35 @@ autoenv_leave() {
 	# execute file when leaving a directory
 	local target_file dir
 	dir="${@}"
-	target_file="${dir}/${AUTOENV_ENV_LEAVE_FILENAME}"
+        autoenv_find_file "${dir}" "${AUTOENV_ENV_LEAVE_FILENAME}" target_file
+        [ -n "${target_file}" ] || target_file="${dir}/${AUTOENV_ENV_LEAVE_FILENAME}"
 	[ -f "${target_file}" ] && autoenv_check_authz_and_run "${target_file}"
+}
+
+# Find file in given directory and its ancestors
+#   $1 - given directory
+#   $2 - filename (assumed not to contain a directory part)
+#   $3 - variable in which to store the full path of the found file (or empty)
+# XXX based on code in autoenv_init(); could potentially generalise and use in both places
+autoenv_find_file() {
+    local _sedregexp _mountpoint _dir _file
+    _sedregexp='-E'
+    _mountpoint="$(df -P "${1}" | tail -n 1 | awk '$0=$NF')"
+    # Remove double slashes, see #125
+    _dir=$(\echo "${1}" | \sed "${_sedregexp}" 's:/+:/:g')
+    # Search in a subshell so we can cd/chdir
+    _file=$(
+        \command -v chdir >/dev/null 2>&1 && \chdir "${_dir}" || builtin cd "${_dir}"
+        while :; do
+            _file="$(\pwd -P)/${2}"
+            [ -f "${_file}" ] && \printf %s "${_file}" && \break
+            [ "$(\pwd -P)" = "${_mountpoint}" ] && \break
+            [ "$(\pwd -P)" = "/" ] && \break
+            \command -v chdir >/dev/null 2>&1 && \chdir "$(\pwd -P)/.." || builtin cd "$(pwd -P)/.."
+        done
+          )
+
+    read "${3}" <<<$_file
 }
 
 # Override the cd alias
