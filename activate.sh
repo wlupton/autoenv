@@ -195,19 +195,22 @@ autoenv_find_file() {
 }
 
 autoenv_cd() {
-	# XXX Do we need the next two statements?
-	#local _pwd
-	#_pwd=${PWD}
+	local _pwd
+	_pwd=${PWD}
 	\command -v chdir >/dev/null 2>&1 && \chdir "${@}" || builtin cd "${@}"
 	do_autoenv
 }
 
 autoenv_pushd() {
+	local _pwd
+	_pwd=${PWD}
 	builtin pushd "${@}"
 	do_autoenv
 }
 
 autoenv_popd() {
+	local _pwd
+	_pwd=${PWD}
 	builtin popd "${@}"
 	do_autoenv
 }
