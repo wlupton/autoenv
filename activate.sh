@@ -150,10 +150,7 @@ autoenv_source() {
 	\unset AUTOENV_CUR_FILE AUTOENV_CUR_DIR
 }
 
-autoenv_cd() {
-	local _pwd
-	_pwd=${PWD}
-	\command -v chdir >/dev/null 2>&1 && \chdir "${@}" || builtin cd "${@}"
+do_autoenv() {
 	if [ "${?}" -eq 0 ]; then
 		autoenv_init "${_pwd}"
 		\return 0
@@ -197,6 +194,24 @@ autoenv_find_file() {
     read "${3}" <<<$_file
 }
 
+autoenv_cd() {
+	# XXX Do we need the next two statements?
+	#local _pwd
+	#_pwd=${PWD}
+	\command -v chdir >/dev/null 2>&1 && \chdir "${@}" || builtin cd "${@}"
+	do_autoenv
+}
+
+autoenv_pushd() {
+	builtin pushd "${@}"
+	do_autoenv
+}
+
+autoenv_popd() {
+	builtin popd "${@}"
+	do_autoenv
+}
+
 # Override the cd alias
 if setopt 2> /dev/null | grep -q aliasfuncdef; then
 	has_alias_func_def_enabled=true;
@@ -207,6 +222,14 @@ fi
 enable_autoenv() {
 	cd() {
 		autoenv_cd "${@}"
+	}
+
+	pushd() {
+		autoenv_pushd "${@}"
+	}
+
+	popd() {
+		autoenv_popd "${@}"
 	}
 
 	cd "${PWD}"
